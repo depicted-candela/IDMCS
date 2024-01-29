@@ -1,0 +1,5 @@
+"""
+>>> from BACK_TRACING_QUEENS import extend, can_be_extended_to_solution
+>>> extend(perm = [], n = 20)
+[1, 3, 0, 2, 7, 9, 13, 19, 16, 18, 15, 17, 5, 10, 8, 6, 4, 12, 14, 11]
+"""
