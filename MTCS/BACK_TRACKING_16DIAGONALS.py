@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from random import shuffle
-from time import sleep
+from time import time
 
 class Topologic(ABC):
 
@@ -58,13 +58,15 @@ class Diagonals(Topologic):
     def __init__(self, perm, r, c, d):
         super().__init__(perm, r, c, d)
     def downleft_corner(self, perm, r, c, d): #OK
-        if d and perm[r-1][c+1]:
+        if perm[r-1][c+1]:
             return d == perm[r-1][c+1]
+        return False
+    def upperleft_corner(self, perm, r, c, d):
         return False
     def upperright_corner(self, perm, r, c, d): #OK
         return False
     def downright_corner(self, perm, r, c, d): #OK
-        if d and perm[r-1][c-1]:
+        if perm[r-1][c-1]:
             return d == perm[r-1][c-1]
         return False
     def centralleft_side(self, perm, r, c, d): #OK
@@ -84,21 +86,15 @@ class NotDiagonals(Topologic):
     def __init__(self, perm, r, c, d):
         super().__init__(perm, r, c, d)
     def downleft_corner(self, perm, r, c, d): #OK
-        if d and perm[r-1][c]:
+        if perm[r-1][c]:
             return d != perm[r-1][c]
         return False
     def upperright_corner(self, perm, r, c, d): #OK
-        if d and perm[r][c-1]:
+        if perm[r][c-1]:
             return d != perm[r][c-1]
         return False
     def downright_corner(self, perm, r, c, d): #OK
-        if d and perm[r-1][c] and perm[r][c-1]:
-            return d != perm[r-1][c] or d != perm[r][c-1]
-        elif d and perm[r-1][c] and not perm[r][c-1]:
-            return d != perm[r-1][c]
-        elif d and not perm[r-1][c] and perm[r][c-1]:
-            return d != perm[r][c-1]
-        return False
+        return self.downleft_corner(perm, r, c, d) or self.upperright_corner(perm, r, c, d)
     def centralleft_side(self, perm, r, c, d): #OK
         return self.downleft_corner(perm, r, c, d)
     def centralright_side(self, perm, r, c, d): #OK
@@ -106,7 +102,7 @@ class NotDiagonals(Topologic):
     def centralupper_side(self, perm, r, c, d): #OK
         return self.upperright_corner(perm, r, c, d)
     def centraldown_side(self, perm, r, c, d): #OK
-        return self.downleft_corner(perm, r, c, d)
+        return self.downright_corner(perm, r, c, d)
     def central(self, perm, r, c, d): #OK
         return self.downright_corner(perm, r, c, d)
     def get_adjacents(self): #OK
@@ -117,39 +113,34 @@ def is_not_possible(perm, r, c, d):
     notDiagonals = NotDiagonals(perm, r, c, d).get_adjacents()
     return diagonals or notDiagonals
 
-## La solución es una fusión de backtracking y brute force using random numbers
-def diagonal_permutator(cell, d, maxd, diagonals=16):
-    if cell == 25 and d == diagonals:
-        return True
-    elif cell == 25:
-        if d > maxd:
-            maxd = d
-            print(maxd)
-        return False
-    else:
-        row = int(cell / size)
-        col = cell - row * 5
-        # Randomly select one of the arrangements
-        shuffle(types)
-        for i in types:
-            if is_not_possible(perm, row, col, i):
-                continue
-            else:
-                perm[row][col] = i
-                if i:
-                    if diagonal_permutator(cell + 1, d + 1, maxd): return True
-                else:
-                    if diagonal_permutator(cell + 1, d, maxd): return True
-        return False
+## La solución es back tracking: cada camino requiere un comienzo
+def diagonal_permutator(cell, d):
+    row = cell // size
+    col = cell % size
+    if cell == size**2:
+        if d == diagonals:
+            print(perm)
+            return
+        else:
+            print(perm)
+            return
+    if (size**2 - cell + 1) + d < diagonals:
+        return
+    if not is_not_possible(perm, row, col, "r"):
+        perm[row][col] = "r"
+        diagonal_permutator(cell + 1, d + 1)
+        perm[row][col] = None
+    if not is_not_possible(perm, row, col, "l"):
+        perm[row][col] = "l"
+        diagonal_permutator(cell + 1, d + 1)
+        perm[row][col] = None
+    diagonal_permutator(cell + 1, d)
+
 
 if __name__ == "__main__":
     size = 5
-    perm = [[None for i in range(size)] for i in range(size)]
-    types = ["l", "r", None]
-    permv = False
-    maxd = 0
-    while permv == False:
-        if diagonal_permutator(0, 0, maxd): permv = True
-    print(perm)
-    
-    
+    diagonals = 16
+    perm = [[None] * size for i in range(size)]
+    timea = time()
+    diagonal_permutator(0, 0)
+    print(time() - timea)
