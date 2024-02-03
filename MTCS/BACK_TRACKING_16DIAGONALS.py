@@ -2,6 +2,16 @@ from abc import ABC, abstractmethod
 from random import shuffle
 from time import time
 
+"""
+>>> size = 5
+>>> diagonals = 16
+>>> perm = [[None] * size for i in range(size)]
+>>> permutator = FillnxnBoardWithDiagonals(size, diagonals)
+>>> permutator.diagonal_permutator()
+[['r', 'r', 'r', None, 'l'], [None, None, 'r', None, 'l'], ['l', 'l', None, 'l', 'l'], ['l', None, 'r', None, None], ['l', None, 'r', 'r', 'r']]
+[['r', None, 'l', 'l', 'l'], ['r', None, 'l', None, None], ['r', 'r', None, 'r', 'r'], [None, None, 'l', None, 'r'], ['l', 'l', 'l', None, 'r']]
+"""
+
 class Topologic(ABC):
 
     def __init__(self, perm, r, c, d):
@@ -58,7 +68,7 @@ class Diagonals(Topologic):
     def __init__(self, perm, r, c, d):
         super().__init__(perm, r, c, d)
     def downleft_corner(self, perm, r, c, d): #OK
-        if perm[r-1][c+1]:
+        if d == "r":
             return d == perm[r-1][c+1]
         return False
     def upperleft_corner(self, perm, r, c, d):
@@ -66,7 +76,7 @@ class Diagonals(Topologic):
     def upperright_corner(self, perm, r, c, d): #OK
         return False
     def downright_corner(self, perm, r, c, d): #OK
-        if perm[r-1][c-1]:
+        if d == "l":
             return d == perm[r-1][c-1]
         return False
     def centralleft_side(self, perm, r, c, d): #OK
@@ -85,14 +95,12 @@ class Diagonals(Topologic):
 class NotDiagonals(Topologic):
     def __init__(self, perm, r, c, d):
         super().__init__(perm, r, c, d)
-    def downleft_corner(self, perm, r, c, d): #OK
-        if perm[r-1][c]:
-            return d != perm[r-1][c]
-        return False
     def upperright_corner(self, perm, r, c, d): #OK
         if perm[r][c-1]:
             return d != perm[r][c-1]
-        return False
+    def downleft_corner(self, perm, r, c, d): #OK
+        if perm[r-1][c]:
+            return d != perm[r-1][c]
     def downright_corner(self, perm, r, c, d): #OK
         return self.downleft_corner(perm, r, c, d) or self.upperright_corner(perm, r, c, d)
     def centralleft_side(self, perm, r, c, d): #OK
@@ -108,33 +116,78 @@ class NotDiagonals(Topologic):
     def get_adjacents(self): #OK
         return self._adjacents
 
-def is_not_possible(perm, r, c, d):
-    diagonals = Diagonals(perm, r, c, d).get_adjacents()
-    notDiagonals = NotDiagonals(perm, r, c, d).get_adjacents()
-    return diagonals or notDiagonals
+class FillnxnBoardWithDiagonals:
+    """Fills a board of size n * n with not topologically touched diagonals
+    """
+    def __init__(self, size, diagonals):
+        self._size  = size
+        self._d     = diagonals
 
-## La solución es back tracking: cada camino requiere un comienzo
-def diagonal_permutator(cell, d):
-    row = cell // size
-    col = cell % size
-    if cell == size**2:
-        if d == diagonals:
-            print(perm)
+    def is_not_possible(self, perm, r, c, d):
+        diagonals = Diagonals(perm, r, c, d).get_adjacents()
+        notDiagonals = NotDiagonals(perm, r, c, d).get_adjacents()
+        return diagonals or notDiagonals
+
+    ## La solución es back tracking: cada camino requiere un comienzo
+    ## The solution is Back Tracking: each path needs a starting
+    def diagonal_permutator(self, cell=0, d=0):
+        # If the possible diagonals in the permutations are less than
+        # the number of desired diagonals, or say, if the remaining
+        # cells (adding one to complete the size in physical terms -
+        # starting from 1 - and in Python - starting from 0 -) in the
+        # board plus the filled diagonals are less than the desired
+        # diagonals, then the permutation can't be filled with such
+        # number of diagonals
+        if (size**2 - cell + 1) + d < diagonals:
+            # return to the previous step and permutate with the next symbol
+            # (r, l, None)
             return
-        else:
-            print(perm)
+        
+        # When the last cell is reached
+        if cell == size**2:
+            # And the number of diagonals is the desired
+            if d == diagonals:
+                # Print such filled board with the desired
+                # number of diagonals
+                print(perm)
+            # Flag to finish the permutation, because that despite could be
+            # one available cell and one remaining diagonal to use, the
+            # constraints could disable the usability of such cell
             return
-    if (size**2 - cell + 1) + d < diagonals:
-        return
-    if not is_not_possible(perm, row, col, "r"):
-        perm[row][col] = "r"
-        diagonal_permutator(cell + 1, d + 1)
-        perm[row][col] = None
-    if not is_not_possible(perm, row, col, "l"):
-        perm[row][col] = "l"
-        diagonal_permutator(cell + 1, d + 1)
-        perm[row][col] = None
-    diagonal_permutator(cell + 1, d)
+        
+        ## Creates the rows and columns with cells less than
+        ## the last one avoiding the problem of PYthon that starts
+        ## with 0 and not 1
+        row = cell // size
+        col = cell % size
+
+        # Uses the constraints from the classes Diagonals
+        # and NotDiagonals with the first branch of symbols: r
+        if not self.is_not_possible(perm, row, col, "r"):
+            # First symbol: r
+            perm[row][col] = "r"
+            # If the permutation does not returns, continue with such
+            # sub ramification
+            self.diagonal_permutator(cell + 1, d + 1)
+            # If the permutation return to this step, put None
+            # as symbol to make the condition fit the the constrainer
+            # class; to use again self.is_not_possible enabling it simplicity
+            # or avoiding writing more code to it
+            perm[row][col] = None
+        # Uses the constraints from the classes Diagonals
+        # and NotDiagonals with the second branch of symbols: l
+        if not self.is_not_possible(perm, row, col, "l"):
+            # Second symbol: l
+            perm[row][col] = "l"
+            # If the permutation does not returns, continue with such
+            # sub ramification
+            self.diagonal_permutator(cell + 1, d + 1)
+            # If the permutation return to this step, put None
+            # as symbol because there is no more options
+            perm[row][col] = None
+        # If both r and l symbols does not work for the current
+        # ramification, None was used and the permutation continues
+        self.diagonal_permutator(cell + 1, d)
 
 
 if __name__ == "__main__":
@@ -142,5 +195,8 @@ if __name__ == "__main__":
     diagonals = 16
     perm = [[None] * size for i in range(size)]
     timea = time()
-    diagonal_permutator(0, 0)
+    permutator = FillnxnBoardWithDiagonals(size, diagonals)
+    permutator.diagonal_permutator()
     print(time() - timea)
+    import doctest
+    doctest.testmod()
